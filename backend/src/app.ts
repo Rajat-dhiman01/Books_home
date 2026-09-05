@@ -10,12 +10,12 @@ import membershipPlansRouter from "./routes/membershipPlans";
 import membershipsRouter from "./routes/memberships";
 import seatAssignmentsRouter from "./routes/seatAssignments";
 import availabilityRouter from "./routes/availability";
-
+import attendanceRouter from "./routes/attendance";
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/availability", availabilityRouter);
-
+app.use("/attendance", attendanceRouter);
 app.get("/health", async (req, res) => {
   try {
     await db.execute(sql`SELECT 1`);

@@ -4,6 +4,7 @@ import { fetchAvailability, type AvailabilityResponse } from '@/lib/api'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Meteors } from '@/components/Meteors'
 
 export default function Dashboard() {
@@ -25,7 +26,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="relative overflow-hidden border-b border-border">
-        <Meteors count={25} />
+        <Meteors count={15} />
         <div className="relative mx-auto max-w-5xl px-6 py-14">
           <Badge variant="accent">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -39,7 +40,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-muted">
             <Clock className="h-4 w-4" />
             {data ? `${data.date} at ${data.time}` : 'Fetching current time'}
@@ -59,14 +60,29 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {loading && !data && (
-          <div className="text-muted">Loading occupancy data.</div>
+        {loading && !data && !error && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex-row items-center justify-between space-y-0">
+                  <Skeleton className="h-5 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-10 w-20" />
+                  <div className="mt-5 space-y-3 border-t border-border pt-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {data && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.shifts.map((shift) => (
-              <Card key={shift.shiftId} className="group">
+            {data.shifts.map((shift, i) => (
+              <Card key={shift.shiftId} className="group animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
                 <CardHeader className="flex-row items-center justify-between space-y-0">
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 text-primary" />
