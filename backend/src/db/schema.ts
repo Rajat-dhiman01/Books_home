@@ -27,6 +27,7 @@ export const membershipPlans = pgTable("membership_plans", {
   name: varchar("name", { length: 100 }).notNull(),
   shiftId: uuid("shift_id").notNull().references(() => shifts.id),
   seatReservationType: varchar("seat_reservation_type", { length: 30 }).notNull(),
+  restrictCheckInToShift: boolean("restrict_check_in_to_shift").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -57,6 +58,7 @@ export const members = pgTable("members", {
   fullName: varchar("full_name", { length: 150 }).notNull(),
   phone: varchar("phone", { length: 30 }),
   email: varchar("email", { length: 255 }),
+  authUserId: uuid("auth_user_id").unique(),
   notes: text("notes"),
   status: varchar("status", { length: 30 }).notNull().default("ACTIVE"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -107,3 +109,13 @@ export const attendance = pgTable("attendance", {
 }, (t) => ({
   statusCheck: check("attendance_status_check", sql`${t.status} IN ('PRESENT','ABSENT')`),
 }));
+export const librarySettings = pgTable("library_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  libraryId: uuid("library_id").notNull().unique().references(() => libraries.id),
+  openTime: time("open_time").notNull(),
+  closeTime: time("close_time").notNull(),
+  attendanceRequired: boolean("attendance_required").notNull().default(true),
+  allowFutureMemberships: boolean("allow_future_memberships").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

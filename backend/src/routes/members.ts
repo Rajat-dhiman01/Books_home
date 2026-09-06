@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import { members } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
+import { supabaseAdmin } from "../lib/supabaseAdmin";
 
 const router = Router();
 
@@ -44,14 +45,40 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
 
+  const library = await getDefaultLibrary();
+  let authUserId: string | undefined;
+
+  // Create the member-portal auth identity first, if an email was given.
+  // This lets the member log in via magic link immediately, with no
+  // separate linking step later (see design decision, Session 07 —
+  // switched from phone/SMS to email due to India DLT registration
+  // requirements for SMS delivery).
+  if (parsed.data.email) {
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: parsed.data.email,
+      email_confirm: true,
+    });
+    if (authError) {
+      return res.status(409).json({
+        error: `Could not create member portal login for email '${parsed.data.email}': ${authError.message}`,
+      });
+    }
+    authUserId = authData.user.id;
+  }
+
   try {
-    const library = await getDefaultLibrary();
     const [created] = await db
       .insert(members)
-      .values({ ...parsed.data, libraryId: library.id })
+      .values({ ...parsed.data, libraryId: library.id, authUserId })
       .returning();
     res.status(201).json({ data: created });
   } catch (err: any) {
+    // Member row failed to insert after the auth identity was already
+    // created above — clean it up so it doesn't linger as an orphaned,
+    // unlinked identity blocking future reuse of this phone number.
+    if (authUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
+    }
     if (isUniqueViolation(err)) {
       return res.status(409).json({ error: `Member code '${parsed.data.memberCode}' already exists in this library.` });
     }

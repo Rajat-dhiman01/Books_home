@@ -11,11 +11,13 @@ import membershipsRouter from "./routes/memberships";
 import seatAssignmentsRouter from "./routes/seatAssignments";
 import availabilityRouter from "./routes/availability";
 import attendanceRouter from "./routes/attendance";
+import librarySettingsRouter from "./routes/librarySettings";
+import memberPortalRouter from "./routes/memberPortal";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use("/availability", availabilityRouter);
-app.use("/attendance", attendanceRouter);
+
 app.get("/health", async (req, res) => {
   try {
     await db.execute(sql`SELECT 1`);
@@ -32,6 +34,10 @@ app.use("/members", membersRouter);
 app.use("/membership_plans", membershipPlansRouter);
 app.use("/memberships", membershipsRouter);
 app.use("/seat_assignments", seatAssignmentsRouter);
+app.use("/availability", availabilityRouter);
+app.use("/attendance", attendanceRouter);
+app.use("/library_settings", librarySettingsRouter);
+app.use("/member", memberPortalRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 

@@ -248,6 +248,26 @@ export async function deleteSeat(id: string): Promise<void> {
   await apiRequest<{ data: Seat }>(`/seats/${id}`, { method: 'DELETE' })
 }
 
+// --- Seat assignments ---
+
+export type AssignmentType = 'RESERVED' | 'PREFERRED'
+
+export interface SeatAssignment {
+  id: string
+  membershipId: string
+  seatId: string
+  assignmentType: AssignmentType
+  startDate: string
+  endDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function fetchSeatAssignments(): Promise<SeatAssignment[]> {
+  const json = await apiRequest<{ data: SeatAssignment[]; count: number }>('/seat_assignments')
+  return json.data
+}
+
 // --- Memberships (read-only here, needed to find "active on date X") ---
 
 export type MembershipStatus = 'SCHEDULED' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
