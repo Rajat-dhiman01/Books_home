@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import { shifts } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
+import { isForeignKeyViolation } from "../lib/errors";
 
 const router = Router();
 
@@ -58,25 +59,38 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
 
-  const [updated] = await db
-    .update(shifts)
-    .set({ ...parsed.data, updatedAt: new Date() })
-    .where(eq(shifts.id, req.params.id))
-    .returning();
+  try {
+    const [updated] = await db
+      .update(shifts)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(shifts.id, req.params.id))
+      .returning();
 
-  if (!updated) {
-    return res.status(404).json({ error: "Shift not found" });
+    if (!updated) {
+      return res.status(404).json({ error: "Shift not found" });
+    }
+    res.json({ data: updated });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
-  res.json({ data: updated });
 });
 
 // DELETE /shifts/:id
 router.delete("/:id", async (req, res) => {
-  const [deleted] = await db.delete(shifts).where(eq(shifts.id, req.params.id)).returning();
-  if (!deleted) {
-    return res.status(404).json({ error: "Shift not found" });
+  try {
+    const [deleted] = await db.delete(shifts).where(eq(shifts.id, req.params.id)).returning();
+    if (!deleted) {
+      return res.status(404).json({ error: "Shift not found" });
+    }
+    res.json({ data: deleted });
+  } catch (err: any) {
+    if (isForeignKeyViolation(err)) {
+      return res.status(409).json({
+        error: "Cannot delete this shift — it is used by one or more membership plans. Reassign or remove those plans first.",
+      });
+    }
+    res.status(500).json({ error: err.message });
   }
-  res.json({ data: deleted });
 });
 
 export default router;

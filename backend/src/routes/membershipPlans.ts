@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import { membershipPlans, shifts } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
+import { isUniqueViolation, isForeignKeyViolation } from "../lib/errors";
 
 const router = Router();
 
@@ -16,10 +17,6 @@ const createPlanSchema = z.object({
 });
 
 const updatePlanSchema = createPlanSchema.partial();
-
-function isUniqueViolation(err: any) {
-  return err.code === "23505" || err.cause?.code === "23505";
-}
 
 // GET /membership_plans
 router.get("/", async (req, res) => {
@@ -100,11 +97,20 @@ router.patch("/:id", async (req, res) => {
 
 // DELETE /membership_plans/:id
 router.delete("/:id", async (req, res) => {
-  const [deleted] = await db.delete(membershipPlans).where(eq(membershipPlans.id, req.params.id)).returning();
-  if (!deleted) {
-    return res.status(404).json({ error: "Membership plan not found" });
+  try {
+    const [deleted] = await db.delete(membershipPlans).where(eq(membershipPlans.id, req.params.id)).returning();
+    if (!deleted) {
+      return res.status(404).json({ error: "Membership plan not found" });
+    }
+    res.json({ data: deleted });
+  } catch (err: any) {
+    if (isForeignKeyViolation(err)) {
+      return res.status(409).json({
+        error: "Cannot delete this membership plan — it is used by one or more memberships. Reassign or remove those memberships first.",
+      });
+    }
+    res.status(500).json({ error: err.message });
   }
-  res.json({ data: deleted });
 });
 
 export default router;

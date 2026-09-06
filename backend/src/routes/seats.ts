@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import { seats } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
+import { isUniqueViolation, isForeignKeyViolation } from "../lib/errors";
 
 const router = Router();
 
@@ -48,8 +49,7 @@ router.post("/", async (req, res) => {
       .returning();
     res.status(201).json({ data: created });
   } catch (err: any) {
-    if (err.code === "23505" || err.cause?.code === "23505") {
-      // Postgres unique_violation
+    if (isUniqueViolation(err)) {
       return res.status(409).json({ error: `Seat number '${parsed.data.seatNumber}' already exists in this library.` });
     }
     res.status(500).json({ error: err.message });
@@ -75,7 +75,7 @@ router.patch("/:id", async (req, res) => {
     }
     res.json({ data: updated });
   } catch (err: any) {
-    if (err.code === "23505") {
+    if (isUniqueViolation(err)) {
       return res.status(409).json({ error: `Seat number '${parsed.data.seatNumber}' already exists in this library.` });
     }
     res.status(500).json({ error: err.message });
@@ -84,11 +84,20 @@ router.patch("/:id", async (req, res) => {
 
 // DELETE /seats/:id
 router.delete("/:id", async (req, res) => {
-  const [deleted] = await db.delete(seats).where(eq(seats.id, req.params.id)).returning();
-  if (!deleted) {
-    return res.status(404).json({ error: "Seat not found" });
+  try {
+    const [deleted] = await db.delete(seats).where(eq(seats.id, req.params.id)).returning();
+    if (!deleted) {
+      return res.status(404).json({ error: "Seat not found" });
+    }
+    res.json({ data: deleted });
+  } catch (err: any) {
+    if (isForeignKeyViolation(err)) {
+      return res.status(409).json({
+        error: "Cannot delete this seat — it has existing seat assignment records. Remove those assignments first, or mark the seat INACTIVE/MAINTENANCE instead.",
+      });
+    }
+    res.status(500).json({ error: err.message });
   }
-  res.json({ data: deleted });
 });
 
 export default router;

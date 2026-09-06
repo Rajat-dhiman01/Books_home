@@ -5,6 +5,7 @@ import { members } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
 import { supabaseAdmin } from "../lib/supabaseAdmin";
+import { isUniqueViolation, isForeignKeyViolation } from "../lib/errors";
 
 const router = Router();
 
@@ -18,10 +19,6 @@ const createMemberSchema = z.object({
 });
 
 const updateMemberSchema = createMemberSchema.partial();
-
-function isUniqueViolation(err: any) {
-  return err.code === "23505" || err.cause?.code === "23505";
-}
 
 // GET /members
 router.get("/", async (req, res) => {
@@ -114,11 +111,20 @@ router.patch("/:id", async (req, res) => {
 
 // DELETE /members/:id
 router.delete("/:id", async (req, res) => {
-  const [deleted] = await db.delete(members).where(eq(members.id, req.params.id)).returning();
-  if (!deleted) {
-    return res.status(404).json({ error: "Member not found" });
+  try {
+    const [deleted] = await db.delete(members).where(eq(members.id, req.params.id)).returning();
+    if (!deleted) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+    res.json({ data: deleted });
+  } catch (err: any) {
+    if (isForeignKeyViolation(err)) {
+      return res.status(409).json({
+        error: "Cannot delete this member — they have existing membership records. Remove or reassign their memberships first.",
+      });
+    }
+    res.status(500).json({ error: err.message });
   }
-  res.json({ data: deleted });
 });
 
 export default router;

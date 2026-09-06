@@ -36,7 +36,20 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
 }
 
 // GET /memberships
+// Optional ?memberId=<uuid> query filter — returns only memberships
+// belonging to that member. Omit the query param to get every membership,
+// unfiltered (previous behavior, preserved).
 router.get("/", async (req, res) => {
+  const { memberId } = req.query;
+
+  if (memberId !== undefined) {
+    if (typeof memberId !== "string" || !z.string().uuid().safeParse(memberId).success) {
+      return res.status(400).json({ error: "'memberId' query parameter must be a valid UUID." });
+    }
+    const rows = await db.select().from(memberships).where(eq(memberships.memberId, memberId));
+    return res.json({ data: rows, count: rows.length });
+  }
+
   const rows = await db.select().from(memberships);
   res.json({ data: rows, count: rows.length });
 });
