@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, Fragment } from 'react'
 import { Link } from 'react-router-dom'
-import { Armchair, Clock, RefreshCw, Wrench, Ban, Users2, ChevronRight } from 'lucide-react'
+import { Armchair, Clock, RefreshCw, Wrench, Ban, Users2, ChevronRight, Eye, X as XIcon } from 'lucide-react'
 import {
   fetchAvailability,
   fetchSeatAssignments,
   fetchMemberships,
   fetchMembers,
   fetchMembershipPlans,
+  fetchShifts,
   type AvailabilityResponse,
   type SeatStatus,
   type SeatStatusEntry,
@@ -14,6 +15,8 @@ import {
   type Membership,
   type Member,
   type MembershipPlan,
+  type Shift,
+  type ShiftAvailability,
 } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +48,11 @@ const STATUS_DOT: Record<SeatStatus, string> = {
   INACTIVE: 'bg-muted',
   MAINTENANCE: 'bg-amber-400',
 }
+
+// Row stagger is capped so a large seat grid (e.g. 80 seats) still reveals
+// as one coordinated animation, not a multi-second cascading drip.
+const ROW_STAGGER_MS = 60
+const ROW_STAGGER_MAX_MS = 480
 
 function naturalCompare(a: string, b: string) {
   const an = parseInt(a, 10)
@@ -81,25 +89,45 @@ export default function SeatMap() {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [plans, setPlans] = useState<MembershipPlan[]>([])
+  const [allShifts, setAllShifts] = useState<Shift[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null)
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null)
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null)
 
+  // Used only when no shift is currently active (e.g. late night) — lets
+  // staff explicitly preview what a given shift's seat map would look like,
+  // clearly separate from the live status shown during operating hours.
+  const [previewShiftId, setPreviewShiftId] = useState<string | null>(null)
+  const [previewShift, setPreviewShift] = useState<ShiftAvailability | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+
   const columns = useResponsiveColumns()
 
   function load() {
     setLoading(true)
     setError(null)
-    Promise.all([fetchAvailability(), fetchSeatAssignments(), fetchMemberships(), fetchMembers(), fetchMembershipPlans()])
-      .then(([availability, assignmentRows, membershipRows, memberRows, planRows]) => {
+    setPreviewShiftId(null)
+    setPreviewShift(null)
+    setPreviewError(null)
+    Promise.all([
+      fetchAvailability(),
+      fetchSeatAssignments(),
+      fetchMemberships(),
+      fetchMembers(),
+      fetchMembershipPlans(),
+      fetchShifts(),
+    ])
+      .then(([availability, assignmentRows, membershipRows, memberRows, planRows, shiftRows]) => {
         setData(availability)
         setActiveShiftId((prev) => prev ?? availability.shifts[0]?.shiftId ?? null)
         setAssignments(assignmentRows)
         setMemberships(membershipRows)
         setMembers(memberRows)
         setPlans(planRows)
+        setAllShifts(shiftRows)
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false))
@@ -107,7 +135,20 @@ export default function SeatMap() {
 
   useEffect(load, [])
 
-  const activeShift = data?.shifts.find((s) => s.shiftId === activeShiftId) ?? data?.shifts[0]
+  useEffect(() => {
+    if (!previewShiftId) return
+    setPreviewLoading(true)
+    setPreviewError(null)
+    fetchAvailability(previewShiftId)
+      .then((res) => setPreviewShift(res.shifts[0] ?? null))
+      .catch((err: Error) => setPreviewError(err.message))
+      .finally(() => setPreviewLoading(false))
+  }, [previewShiftId])
+
+  const noShiftCurrentlyActive = !loading && !error && !!data && data.shifts.length === 0
+  const isPreviewing = noShiftCurrentlyActive && !!previewShiftId
+
+  const activeShift = data?.shifts.find((s) => s.shiftId === activeShiftId) ?? data?.shifts[0] ?? (isPreviewing ? previewShift ?? undefined : undefined)
 
   const floors = useMemo(() => {
     if (!activeShift) return []
@@ -159,6 +200,8 @@ export default function SeatMap() {
     return { assignment, membership, member, plan }
   }, [selectedSeat, assignments, memberships, members, plans, today])
 
+  const showInitialGridSkeleton = loading && !error && !data
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border">
@@ -202,6 +245,62 @@ export default function SeatMap() {
         {error && (
           <Card className="mb-6 border-danger/30 bg-danger/5">
             <CardContent className="pt-5 text-danger">Could not load seat data. {error}</CardContent>
+          </Card>
+        )}
+
+        {/* No shift currently active — offer a preview instead of a blank page */}
+        {noShiftCurrentlyActive && (
+          <Card className="mb-6 border-amber-400/30 bg-amber-400/5">
+            <CardContent className="pt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-foreground">No shift is currently active.</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {data ? `It's ${data.time} right now, outside every configured shift's hours.` : ''} Pick a shift below to
+                    preview its seat map — this is a preview only, not live status.
+                  </p>
+                </div>
+                {isPreviewing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setPreviewShiftId(null)
+                      setPreviewShift(null)
+                    }}
+                  >
+                    <XIcon className="h-4 w-4" />
+                    Exit preview
+                  </Button>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {allShifts
+                  .filter((s) => s.isActive)
+                  .map((shift) => (
+                    <button
+                      key={shift.id}
+                      onClick={() => setPreviewShiftId(shift.id)}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                        previewShiftId === shift.id
+                          ? 'border-primary/40 bg-primary/20 text-primary'
+                          : 'border-border bg-surface text-muted hover:text-foreground',
+                      )}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      {shift.name}
+                      <span className="text-xs opacity-70">
+                        {shift.startTime}–{shift.endTime}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+
+              {previewError && <p className="mt-3 text-sm text-danger">Could not load preview. {previewError}</p>}
+            </CardContent>
           </Card>
         )}
 
@@ -263,11 +362,70 @@ export default function SeatMap() {
           </div>
         )}
 
-        {loading && !data && <div className="text-muted">Loading seat map.</div>}
+        {/* Initial-load skeleton for the grid itself (before we even know column/seat counts) */}
+        {showInitialGridSkeleton && (
+          <div>
+            <div className="mb-6 flex flex-wrap gap-4">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Skeleton key={i} className="h-4 w-20" />
+              ))}
+            </div>
+            <div className="overflow-x-auto pb-2">
+              <div
+                className="grid gap-2"
+                style={{
+                  gridTemplateColumns: `2rem repeat(${columns}, minmax(2.75rem, 1fr))`,
+                  minWidth: `${(columns + 1) * 3}rem`,
+                }}
+              >
+                {Array.from({ length: 4 }, (_, rowIndex) => (
+                  <Fragment key={rowIndex}>
+                    <div />
+                    {Array.from({ length: columns }, (_, colIndex) => (
+                      <Skeleton
+                        key={`sk-${rowIndex}-${colIndex}`}
+                        className="aspect-square w-full rounded-lg"
+                        style={{ animationDelay: `${Math.min(rowIndex * ROW_STAGGER_MS, ROW_STAGGER_MAX_MS)}ms` }}
+                      />
+                    ))}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {noShiftCurrentlyActive && previewShiftId && previewLoading && (
+          <div className="overflow-x-auto pb-2">
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `2rem repeat(${columns}, minmax(2.75rem, 1fr))`,
+                minWidth: `${(columns + 1) * 3}rem`,
+              }}
+            >
+              {Array.from({ length: 4 }, (_, rowIndex) => (
+                <Fragment key={rowIndex}>
+                  <div />
+                  {Array.from({ length: columns }, (_, colIndex) => (
+                    <Skeleton key={`pv-sk-${rowIndex}-${colIndex}`} className="aspect-square w-full rounded-lg" />
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        )}
 
         {activeShift && (
           <div className={selectedSeat ? 'lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-6' : ''}>
             <div>
+              {isPreviewing && (
+                <div className="mb-4 inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                  <Eye className="h-3.5 w-3.5" />
+                  Preview — {activeShift.shiftName}, not live
+                </div>
+              )}
+
               {/* Legend */}
               <div className="mb-6 flex flex-wrap gap-4 text-sm">
                 {(Object.keys(STATUS_LABELS) as SeatStatus[]).map((status) => (
@@ -296,38 +454,42 @@ export default function SeatMap() {
                         {i + 1}
                       </div>
                     ))}
-                    {rows.map((row, rowIndex) => (
-                      <Fragment key={rowIndex}>
-                        <div className="flex items-center justify-center text-xs font-medium text-muted">
-                          {String.fromCharCode(65 + rowIndex)}
-                        </div>
-                        {Array.from({ length: columns }, (_, colIndex) => {
-                          const seat = row[colIndex]
-                          if (!seat) return <div key={`empty-${rowIndex}-${colIndex}`} />
-                          return (
-                            <button
-                              key={seat.seatId}
-                              onClick={() => setSelectedSeatId((prev) => (prev === seat.seatId ? null : seat.seatId))}
-                              title={seat.name ?? seat.seatNumber}
-                              className={cn(
-                                'flex aspect-square flex-col items-center justify-center rounded-lg border text-xs font-medium transition-colors',
-                                STATUS_STYLES[seat.status],
-                                selectedSeatId === seat.seatId && 'ring-2 ring-foreground',
-                              )}
-                            >
-                              {seat.status === 'MAINTENANCE' ? (
-                                <Wrench className="h-3.5 w-3.5" />
-                              ) : seat.status === 'INACTIVE' ? (
-                                <Ban className="h-3.5 w-3.5" />
-                              ) : null}
-                              <span className={seat.status === 'MAINTENANCE' || seat.status === 'INACTIVE' ? 'mt-0.5' : ''}>
-                                {seat.seatNumber}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </Fragment>
-                    ))}
+                    {rows.map((row, rowIndex) => {
+                      const rowDelay = Math.min(rowIndex * ROW_STAGGER_MS, ROW_STAGGER_MAX_MS)
+                      return (
+                        <Fragment key={rowIndex}>
+                          <div className="flex items-center justify-center text-xs font-medium text-muted">
+                            {String.fromCharCode(65 + rowIndex)}
+                          </div>
+                          {Array.from({ length: columns }, (_, colIndex) => {
+                            const seat = row[colIndex]
+                            if (!seat) return <div key={`empty-${rowIndex}-${colIndex}`} />
+                            return (
+                              <button
+                                key={seat.seatId}
+                                onClick={() => setSelectedSeatId((prev) => (prev === seat.seatId ? null : seat.seatId))}
+                                title={seat.name ?? seat.seatNumber}
+                                className={cn(
+                                  'animate-fade-in flex aspect-square flex-col items-center justify-center rounded-lg border text-xs font-medium transition-colors',
+                                  STATUS_STYLES[seat.status],
+                                  selectedSeatId === seat.seatId && 'ring-2 ring-foreground',
+                                )}
+                                style={{ animationDelay: `${rowDelay}ms` }}
+                              >
+                                {seat.status === 'MAINTENANCE' ? (
+                                  <Wrench className="h-3.5 w-3.5" />
+                                ) : seat.status === 'INACTIVE' ? (
+                                  <Ban className="h-3.5 w-3.5" />
+                                ) : null}
+                                <span className={seat.status === 'MAINTENANCE' || seat.status === 'INACTIVE' ? 'mt-0.5' : ''}>
+                                  {seat.seatNumber}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </Fragment>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -335,7 +497,7 @@ export default function SeatMap() {
 
             {/* Detail panel */}
             {selectedSeat && (
-              <Card className="mt-6 lg:mt-0">
+              <Card className="animate-fade-in mt-6 lg:mt-0">
                 <CardContent className="pt-5">
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="font-display text-lg font-medium text-foreground">

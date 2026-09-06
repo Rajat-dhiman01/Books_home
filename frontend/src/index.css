@@ -44,3 +44,333 @@ h1, h2, h3, h4 {
 .animate-meteor {
   animation: meteor 5s linear infinite;
 }
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggered card entrance, used across Dashboard/Members/Settings and the
+   member portal. Short and subtle on purpose — this should read as "smooth
+   and instant", not as a visible loading effect. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.32s ease-out both;
+}
+
+/* Skeleton loading placeholder — a gentle opacity pulse, no layout shift. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}

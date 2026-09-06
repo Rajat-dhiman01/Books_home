@@ -17,6 +17,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+
+// Matches the 40ms-offset list stagger used elsewhere (Members, Settings),
+// capped so a long attendance roster still settles quickly.
+const LIST_STAGGER_MS = 40
+const LIST_STAGGER_MAX_MS = 400
 
 function todayIso() {
   const d = new Date()
@@ -124,12 +130,36 @@ export default function Attendance() {
           </Card>
         )}
 
-        {loading && <div className="text-muted">Loading attendance.</div>}
+        {loading && (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Card key={i}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <div className="min-w-0 flex-1">
+                    <Skeleton className="h-4 w-40" />
+                    <div className="mt-2 flex items-center gap-2">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {!loading && (
           <div className="flex flex-col gap-3">
-            {activeToday.map(({ membership, member, plan, record }) => (
-              <Card key={membership.id}>
+            {activeToday.map(({ membership, member, plan, record }, index) => (
+              <Card
+                key={membership.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${Math.min(index * LIST_STAGGER_MS, LIST_STAGGER_MAX_MS)}ms` }}
+              >
                 <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                   <div className="min-w-0">
                     <div className="truncate font-medium text-foreground">

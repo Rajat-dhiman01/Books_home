@@ -17,9 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { Meteors } from '@/components/Meteors'
-
-// Photo by Ahmet Yuksek on Unsplash, free to use under the Unsplash License.
-const HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1755918909925-f62b86d93c2a?fm=jpg&q=60&w=2400&auto=format&fit=crop'
+import { HERO_IMAGE_URL, heroBackgroundStyle } from '@/lib/branding'
 
 export default function Dashboard() {
   const [data, setData] = useState<AvailabilityResponse | null>(null)
@@ -73,11 +71,7 @@ export default function Dashboard() {
       {/* Hero */}
       <div
         className="relative overflow-hidden border-b border-border bg-gradient-to-b from-surface via-background to-background bg-cover bg-center"
-        style={
-          HERO_IMAGE_URL
-            ? { backgroundImage: `linear-gradient(to bottom, rgba(8,9,11,0.55), rgba(8,9,11,0.92)), url(${HERO_IMAGE_URL})` }
-            : undefined
-        }
+        style={heroBackgroundStyle(HERO_IMAGE_URL)}
       >
         <Meteors count={15} />
         <div className="relative mx-auto flex max-w-5xl items-start justify-between gap-6 px-6 py-14">

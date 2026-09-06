@@ -1,31 +1,37 @@
-﻿import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { Sidebar } from '@/components/Sidebar'
-import { MobileTopBar, MobileBottomNav } from '@/components/MobileNav'
-import Dashboard from './pages/Dashboard'
-import SeatMap from './pages/SeatMap'
-import Members from './pages/Members'
-import Attendance from './pages/Attendance'
-import Settings from './pages/Settings'
+﻿import { Suspense, lazy } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
+// Route-level code-splitting: staff pages and the member portal are
+// separate audiences that never need each other's code (member devices in
+// particular shouldn't have to download the Sidebar/SeatMap/Settings
+// bundle just to check in). Each group loads independently, on demand.
+const StaffApp = lazy(() => import('./StaffApp'))
+const MemberLogin = lazy(() => import('./pages/member/MemberLogin'))
+const MemberCallback = lazy(() => import('./pages/member/MemberCallback'))
+const MemberDashboard = lazy(() => import('./pages/member/MemberDashboard'))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+    </div>
+  )
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <MobileTopBar />
-          <main className="flex-1 pb-20 lg:pb-0">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/seats" element={<SeatMap />} />
-              <Route path="/members" element={<Members />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </main>
-          <MobileBottomNav />
-        </div>
-      </div>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          {/* Member portal: standalone pages, no staff sidebar/nav. */}
+          <Route path="/member/login" element={<MemberLogin />} />
+          <Route path="/member/callback" element={<MemberCallback />} />
+          <Route path="/member/dashboard" element={<MemberDashboard />} />
+
+          {/* Everything else is the staff app, with its own nested routing. */}
+          <Route path="/*" element={<StaffApp />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

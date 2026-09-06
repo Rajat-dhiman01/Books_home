@@ -26,8 +26,9 @@ export interface AvailabilityResponse {
   shifts: ShiftAvailability[]
 }
 
-export async function fetchAvailability(): Promise<AvailabilityResponse> {
-  const res = await fetch('/api/availability')
+export async function fetchAvailability(shiftId?: string): Promise<AvailabilityResponse> {
+  const url = shiftId ? `/api/availability?shiftId=${encodeURIComponent(shiftId)}` : '/api/availability'
+  const res = await fetch(url)
   if (!res.ok) {
     throw new Error(`Failed to fetch availability (${res.status})`)
   }

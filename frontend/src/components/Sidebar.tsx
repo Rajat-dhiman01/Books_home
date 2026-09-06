@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Armchair, Users, ClipboardCheck, Settings as SettingsIcon, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HERO_IMAGE_URL, heroBackgroundStyle } from '@/lib/branding'
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -21,7 +22,7 @@ export function Sidebar() {
         <div className="mt-0.5 text-xs font-medium uppercase tracking-[0.2em] text-muted">Rishikesh</div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="space-y-1 px-3">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -39,6 +40,20 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Fills the remaining sidebar space with the same hero imagery/gradient
+          used on the Dashboard, for visual consistency between the two. */}
+      <div className="min-h-0 flex-1 px-3 py-4">
+        <div
+          className="relative h-full min-h-[180px] overflow-hidden rounded-xl border border-border bg-cover bg-center"
+          style={heroBackgroundStyle(HERO_IMAGE_URL)}
+        >
+          <div className="absolute inset-0 flex flex-col justify-end p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Study &middot; Focus &middot; Grow</div>
+            <div className="mt-1 font-display text-lg font-medium text-white">A quieter you</div>
+          </div>
+        </div>
+      </div>
 
       <div className="border-t border-border p-3">
         <button
