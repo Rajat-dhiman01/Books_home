@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { attendance, memberships, membershipPlans, shifts, seatAssignments, seats } from "../db/schema";
 import { eq, and, lte, gte } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
-import { getNowInTimezone, isTimeInShift } from "../lib/shiftTime";
+import { getNowInTimezone, isTimeInShift, shiftDate } from "../lib/shiftTime";
 import { requireMemberAuth, AuthenticatedMemberRequest } from "../middleware/requireMemberAuth";
 import { isUniqueViolation } from "../lib/errors";
 
@@ -113,6 +113,35 @@ router.patch("/attendance/check-out", async (req: AuthenticatedMemberRequest, re
     .returning();
 
   res.json({ data: updated });
+});
+
+// GET /member/attendance/history — last 7 calendar days (including today),
+// across whichever membership(s) were active during that window. Days with
+// no attendance row are reported as null (not assumed absent) — a member
+// might not have had a membership yet on an earlier day in the range.
+router.get("/attendance/history", async (req: AuthenticatedMemberRequest, res: Response) => {
+  const library = await getDefaultLibrary();
+  const { date: today } = getNowInTimezone(library.timezone);
+  const fromDate = shiftDate(today, -6);
+
+  const rows = await db
+    .select({
+      attendanceDate: attendance.attendanceDate,
+      status: attendance.status,
+      checkInAt: attendance.checkInAt,
+      checkOutAt: attendance.checkOutAt,
+    })
+    .from(attendance)
+    .innerJoin(memberships, eq(attendance.membershipId, memberships.id))
+    .where(
+      and(
+        eq(memberships.memberId, req.member!.id),
+        gte(attendance.attendanceDate, fromDate),
+        lte(attendance.attendanceDate, today)
+      )
+    );
+
+  res.json({ data: rows, from: fromDate, to: today });
 });
 
 export default router;

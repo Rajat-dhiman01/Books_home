@@ -96,3 +96,20 @@ export async function memberCheckOut(accessToken: string): Promise<AttendanceRec
   })
   return json.data
 }
+
+export interface MemberAttendanceHistoryEntry {
+  attendanceDate: string
+  status: 'PRESENT' | 'ABSENT'
+  checkInAt: string | null
+  checkOutAt: string | null
+}
+
+export interface MemberAttendanceHistoryResponse {
+  data: MemberAttendanceHistoryEntry[]
+  from: string
+  to: string
+}
+
+export async function fetchMemberAttendanceHistory(accessToken: string): Promise<MemberAttendanceHistoryResponse> {
+  return memberApiRequest<MemberAttendanceHistoryResponse>('/attendance/history', accessToken)
+}
