@@ -90,10 +90,52 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
 
+  const existingRows = await db.select().from(members).where(eq(members.id, req.params.id));
+  const existing = existingRows[0];
+  if (!existing) {
+    return res.status(404).json({ error: "Member not found" });
+  }
+
+  const emailChanged = parsed.data.email !== undefined && parsed.data.email !== existing.email;
+
+  // Keeps the member-portal login identity in sync with the member row.
+  // Without this, changing a member's email here would silently leave the
+  // Supabase Auth identity pointed at the old email — the member could no
+  // longer log in with their new email, and a magic link sent to the new
+  // address would create an orphaned, unlinked auth identity instead.
+  let newAuthUserId: string | undefined;
+  let createdFreshAuthUser = false;
+
+  if (emailChanged) {
+    if (existing.authUserId) {
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(existing.authUserId, {
+        email: parsed.data.email,
+        email_confirm: true,
+      });
+      if (updateAuthError) {
+        return res.status(409).json({
+          error: `Could not update member portal login to '${parsed.data.email}': ${updateAuthError.message}`,
+        });
+      }
+    } else {
+      const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+        email: parsed.data.email!,
+        email_confirm: true,
+      });
+      if (createAuthError) {
+        return res.status(409).json({
+          error: `Could not create member portal login for '${parsed.data.email}': ${createAuthError.message}`,
+        });
+      }
+      newAuthUserId = authData.user.id;
+      createdFreshAuthUser = true;
+    }
+  }
+
   try {
     const [updated] = await db
       .update(members)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...parsed.data, ...(newAuthUserId ? { authUserId: newAuthUserId } : {}), updatedAt: new Date() })
       .where(eq(members.id, req.params.id))
       .returning();
 
@@ -102,6 +144,15 @@ router.patch("/:id", async (req, res) => {
     }
     res.json({ data: updated });
   } catch (err: any) {
+    // DB write failed after an Auth-side change already succeeded above —
+    // undo it so the two systems don't drift out of sync.
+    if (createdFreshAuthUser && newAuthUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(newAuthUserId).catch(() => {});
+    } else if (emailChanged && existing.authUserId && existing.email) {
+      await supabaseAdmin.auth.admin
+        .updateUserById(existing.authUserId, { email: existing.email, email_confirm: true })
+        .catch(() => {});
+    }
     if (isUniqueViolation(err)) {
       return res.status(409).json({ error: `Member code '${parsed.data.memberCode}' already exists in this library.` });
     }
