@@ -29,3 +29,12 @@ export function shiftDate(dateStr: string, days: number): string {
   dt.setUTCDate(dt.getUTCDate() + days);
   return dt.toISOString().slice(0, 10);
 }
+
+// Returns the first calendar day of the month containing dateStr, as a
+// YYYY-MM-DD string. Pure calendar-date arithmetic, same convention as
+// shiftDate above — the input date string is already the correct local
+// calendar date, so no timezone conversion happens here.
+export function startOfMonth(dateStr: string): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  return `${y}-${String(m).padStart(2, "0")}-01`;
+}

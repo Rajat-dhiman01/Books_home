@@ -8,7 +8,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 const StaffApp = lazy(() => import('./StaffApp'))
 const MemberLogin = lazy(() => import('./pages/member/MemberLogin'))
 const MemberCallback = lazy(() => import('./pages/member/MemberCallback'))
-const MemberDashboard = lazy(() => import('./pages/member/MemberDashboard'))
+const MemberLayout = lazy(() => import('./pages/member/MemberLayout'))
+const MemberHome = lazy(() => import('./pages/member/Home'))
+const MemberAttendance = lazy(() => import('./pages/member/Attendance'))
+const MemberMembership = lazy(() => import('./pages/member/Membership'))
+const MemberSeat = lazy(() => import('./pages/member/Seat'))
+const MemberProfile = lazy(() => import('./pages/member/Profile'))
 
 function RouteFallback() {
   return (
@@ -23,10 +28,19 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          {/* Member portal: standalone pages, no staff sidebar/nav. */}
+          {/* Member portal: standalone pages, no staff sidebar/nav. Login and
+              the OAuth callback are unauthenticated, so they sit outside the
+              shell; everything else shares MemberLayout's bottom tab nav and
+              single /member/me fetch. */}
           <Route path="/member/login" element={<MemberLogin />} />
           <Route path="/member/callback" element={<MemberCallback />} />
-          <Route path="/member/dashboard" element={<MemberDashboard />} />
+          <Route element={<MemberLayout />}>
+            <Route path="/member/dashboard" element={<MemberHome />} />
+            <Route path="/member/attendance" element={<MemberAttendance />} />
+            <Route path="/member/membership" element={<MemberMembership />} />
+            <Route path="/member/seat" element={<MemberSeat />} />
+            <Route path="/member/profile" element={<MemberProfile />} />
+          </Route>
 
           {/* Everything else is the staff app, with its own nested routing. */}
           <Route path="/*" element={<StaffApp />} />

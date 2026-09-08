@@ -1,9 +1,10 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { db } from "../lib/db";
 import { attendance, memberships, membershipPlans, shifts, seatAssignments, seats } from "../db/schema";
 import { eq, and, lte, gte } from "drizzle-orm";
 import { getDefaultLibrary } from "../lib/getDefaultLibrary";
-import { getNowInTimezone, isTimeInShift, shiftDate } from "../lib/shiftTime";
+import { getNowInTimezone, isTimeInShift, shiftDate, startOfMonth } from "../lib/shiftTime";
 import { requireMemberAuth, AuthenticatedMemberRequest } from "../middleware/requireMemberAuth";
 import { isUniqueViolation } from "../lib/errors";
 
@@ -115,14 +116,28 @@ router.patch("/attendance/check-out", async (req: AuthenticatedMemberRequest, re
   res.json({ data: updated });
 });
 
-// GET /member/attendance/history — last 7 calendar days (including today),
-// across whichever membership(s) were active during that window. Days with
-// no attendance row are reported as null (not assumed absent) — a member
-// might not have had a membership yet on an earlier day in the range.
+// GET /member/attendance/history — defaults to the last 7 calendar days
+// (including today), or the current calendar-month-to-date when
+// ?range=month is passed. The month window intentionally resets on the 1st
+// of each calendar month rather than tracking the member's membership or
+// subscription start date — "this month" always means the current
+// wall-clock month in the library's own timezone, not a rolling 30 days.
+// Days with no attendance row are reported as absent from the array (not
+// assumed absent) — a member might not have had a membership yet on an
+// earlier day in the range.
+const historyQuerySchema = z.object({
+  range: z.enum(["7d", "month"]).default("7d"),
+});
+
 router.get("/attendance/history", async (req: AuthenticatedMemberRequest, res: Response) => {
+  const parsed = historyQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
   const library = await getDefaultLibrary();
   const { date: today } = getNowInTimezone(library.timezone);
-  const fromDate = shiftDate(today, -6);
+  const fromDate = parsed.data.range === "month" ? startOfMonth(today) : shiftDate(today, -6);
 
   const rows = await db
     .select({

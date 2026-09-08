@@ -110,6 +110,12 @@ export interface MemberAttendanceHistoryResponse {
   to: string
 }
 
-export async function fetchMemberAttendanceHistory(accessToken: string): Promise<MemberAttendanceHistoryResponse> {
-  return memberApiRequest<MemberAttendanceHistoryResponse>('/attendance/history', accessToken)
+// range='7d' (default) matches the rolling week shown on Home; range='month'
+// returns the current calendar month to date, resetting on the 1st rather
+// than tracking the member's membership start date.
+export async function fetchMemberAttendanceHistory(
+  accessToken: string,
+  range: '7d' | 'month' = '7d',
+): Promise<MemberAttendanceHistoryResponse> {
+  return memberApiRequest<MemberAttendanceHistoryResponse>(`/attendance/history?range=${range}`, accessToken)
 }
