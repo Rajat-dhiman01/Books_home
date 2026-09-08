@@ -27,21 +27,39 @@ export interface AvailabilityResponse {
 }
 
 export async function fetchAvailability(shiftId?: string): Promise<AvailabilityResponse> {
-  const url = shiftId ? `/api/availability?shiftId=${encodeURIComponent(shiftId)}` : '/api/availability'
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Failed to fetch availability (${res.status})`)
-  }
-  const json = await res.json()
+  const path = shiftId ? `/availability?shiftId=${encodeURIComponent(shiftId)}` : '/availability'
+  const json = await apiRequest<{ data: AvailabilityResponse }>(path)
   return json.data
 }
 
 // --- Shared request helper for everything below ---
 
+// In production, the frontend (Vercel) and backend (Render) are different
+// origins, so requests need an absolute URL. VITE_API_BASE_URL is set at
+// build time for that case. Locally it's left unset and requests go
+// through Vite's dev proxy (see vite.config.ts), which forwards '/api' to
+// http://localhost:4000.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '/api'
+
+// Every staff-facing request must carry the logged-in staff member's
+// Supabase access token — the backend rejects anything without one. This
+// import is deliberately lazy (dynamic) to avoid a circular import between
+// api.ts and staffAuth.ts.
+async function getStaffAccessToken(): Promise<string | null> {
+  const { supabase } = await import('./supabaseClient')
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? null
+}
+
 async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const token = await getStaffAccessToken()
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {}),
+    },
   })
   const json = await res.json().catch(() => null)
   if (!res.ok) {

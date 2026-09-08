@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 // particular shouldn't have to download the Sidebar/SeatMap/Settings
 // bundle just to check in). Each group loads independently, on demand.
 const StaffApp = lazy(() => import('./StaffApp'))
+const StaffLogin = lazy(() => import('./pages/StaffLogin'))
 const MemberLogin = lazy(() => import('./pages/member/MemberLogin'))
 const MemberCallback = lazy(() => import('./pages/member/MemberCallback'))
 const MemberLayout = lazy(() => import('./pages/member/MemberLayout'))
@@ -42,7 +43,10 @@ function App() {
             <Route path="/member/profile" element={<MemberProfile />} />
           </Route>
 
-          {/* Everything else is the staff app, with its own nested routing. */}
+          {/* Everything else is the staff app. /staff/login is unauthenticated
+              (it's how you get a session in the first place); everything
+              else under StaffApp is gated by RequireStaffAuth inside it. */}
+          <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/*" element={<StaffApp />} />
         </Routes>
       </Suspense>

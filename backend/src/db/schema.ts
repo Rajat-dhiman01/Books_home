@@ -109,6 +109,24 @@ export const attendance = pgTable("attendance", {
 }, (t) => ({
   statusCheck: check("attendance_status_check", sql`${t.status} IN ('PRESENT','ABSENT')`),
 }));
+// Staff/admin accounts — separate identity space from `members`. A staff
+// user is always backed by a real Supabase Auth user (email + password);
+// authUserId links the two. `role` gates who can create/remove other staff
+// accounts: OWNER can manage staff, ADMIN has full data access but cannot
+// add or remove other admins.
+export const staffUsers = pgTable("staff_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  libraryId: uuid("library_id").notNull().references(() => libraries.id),
+  authUserId: uuid("auth_user_id").notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull(),
+  fullName: varchar("full_name", { length: 150 }).notNull(),
+  role: varchar("role", { length: 20 }).notNull().default("ADMIN"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  roleCheck: check("staff_role_check", sql`${t.role} IN ('OWNER','ADMIN')`),
+}));
+
 export const librarySettings = pgTable("library_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
   libraryId: uuid("library_id").notNull().unique().references(() => libraries.id),
