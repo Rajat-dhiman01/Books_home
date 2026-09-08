@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, X, Pencil, Trash2, Clock, IdCard, Armchair } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Clock, IdCard, Armchair, SlidersHorizontal } from 'lucide-react'
 import {
   fetchShifts,
   createShift,
@@ -20,6 +20,10 @@ import {
   type Seat,
   type SeatInput,
   type SeatRowStatus,
+  fetchLibrarySettings,
+  updateLibrarySettings,
+  type LibrarySettings,
+  type LibrarySettingsInput,
 } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,12 +49,13 @@ function SectionSkeleton() {
   )
 }
 
-type Tab = 'shifts' | 'plans' | 'seats'
+type Tab = 'general' | 'shifts' | 'plans' | 'seats'
 
 export default function Settings() {
-  const [tab, setTab] = useState<Tab>('shifts')
+  const [tab, setTab] = useState<Tab>('general')
 
   const tabs: { id: Tab; label: string; icon: typeof Clock }[] = [
+    { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'shifts', label: 'Shifts', icon: Clock },
     { id: 'plans', label: 'Membership plans', icon: IdCard },
     { id: 'seats', label: 'Seats', icon: Armchair },
@@ -83,11 +88,181 @@ export default function Settings() {
           ))}
         </div>
 
+        {tab === 'general' && <GeneralSection />}
         {tab === 'shifts' && <ShiftsSection />}
         {tab === 'plans' && <PlansSection />}
         {tab === 'seats' && <SeatsSection />}
       </div>
     </div>
+  )
+}
+
+// ============================================================
+// General
+// ============================================================
+
+interface GeneralFormState {
+  openTime: string
+  closeTime: string
+  attendanceRequired: boolean
+  allowFutureMemberships: boolean
+}
+
+function toGeneralForm(settings: LibrarySettings): GeneralFormState {
+  return {
+    openTime: settings.openTime.slice(0, 5),
+    closeTime: settings.closeTime.slice(0, 5),
+    attendanceRequired: settings.attendanceRequired,
+    allowFutureMemberships: settings.allowFutureMemberships,
+  }
+}
+
+function GeneralSection() {
+  const [settings, setSettings] = useState<LibrarySettings | null>(null)
+  const [form, setForm] = useState<GeneralFormState | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  function load() {
+    setLoading(true)
+    setError(null)
+    fetchLibrarySettings()
+      .then((data) => {
+        setSettings(data)
+        setForm(toGeneralForm(data))
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [])
+
+  const isDirty = useMemo(() => {
+    if (!settings || !form) return false
+    return (
+      form.openTime !== settings.openTime.slice(0, 5) ||
+      form.closeTime !== settings.closeTime.slice(0, 5) ||
+      form.attendanceRequired !== settings.attendanceRequired ||
+      form.allowFutureMemberships !== settings.allowFutureMemberships
+    )
+  }, [form, settings])
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!form) return
+    if (!form.openTime || !form.closeTime) {
+      setFormError('Opening and closing time are both required.')
+      return
+    }
+
+    const payload: LibrarySettingsInput = {
+      openTime: form.openTime,
+      closeTime: form.closeTime,
+      attendanceRequired: form.attendanceRequired,
+      allowFutureMemberships: form.allowFutureMemberships,
+    }
+
+    setSaving(true)
+    setFormError(null)
+    setSaved(false)
+    try {
+      const updated = await updateLibrarySettings(payload)
+      setSettings(updated)
+      setForm(toGeneralForm(updated))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      setFormError((err as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading && !error) {
+    return <SectionSkeleton />
+  }
+
+  if (error || !form) {
+    return (
+      <Card className="border-danger/30 bg-danger/5">
+        <CardContent className="pt-5 text-danger">Could not load library settings. {error}</CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-5">
+        <h2 className="font-display text-lg font-medium text-foreground">Library operations</h2>
+        <p className="mt-1 text-sm text-muted">
+          These apply library-wide. Shift and plan configuration lives in their own tabs.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="openTime">Opening time *</Label>
+            <Input
+              id="openTime"
+              type="time"
+              value={form.openTime}
+              onChange={(e) => setForm((f) => (f ? { ...f, openTime: e.target.value } : f))}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="closeTime">Closing time *</Label>
+            <Input
+              id="closeTime"
+              type="time"
+              value={form.closeTime}
+              onChange={(e) => setForm((f) => (f ? { ...f, closeTime: e.target.value } : f))}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="attendanceRequired">Attendance required</Label>
+            <Select
+              id="attendanceRequired"
+              value={form.attendanceRequired ? 'yes' : 'no'}
+              onChange={(e) =>
+                setForm((f) => (f ? { ...f, attendanceRequired: e.target.value === 'yes' } : f))
+              }
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="allowFutureMemberships">Allow future memberships</Label>
+            <Select
+              id="allowFutureMemberships"
+              value={form.allowFutureMemberships ? 'yes' : 'no'}
+              onChange={(e) =>
+                setForm((f) => (f ? { ...f, allowFutureMemberships: e.target.value === 'yes' } : f))
+              }
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </Select>
+          </div>
+
+          {formError && <div className="sm:col-span-2 text-sm text-danger">{formError}</div>}
+
+          <div className="flex items-center gap-3 sm:col-span-2">
+            <Button type="submit" variant="primary" disabled={saving || !isDirty}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </Button>
+            {saved && <span className="text-sm text-accent">Saved.</span>}
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 

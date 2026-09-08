@@ -249,6 +249,41 @@ export async function deleteSeat(id: string): Promise<void> {
   await apiRequest<{ data: Seat }>(`/seats/${id}`, { method: 'DELETE' })
 }
 
+// --- Library settings ---
+
+export interface LibrarySettings {
+  id: string
+  libraryId: string
+  openTime: string
+  closeTime: string
+  attendanceRequired: boolean
+  allowFutureMemberships: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LibrarySettingsInput {
+  openTime?: string
+  closeTime?: string
+  attendanceRequired?: boolean
+  allowFutureMemberships?: boolean
+}
+
+export async function fetchLibrarySettings(): Promise<LibrarySettings> {
+  const json = await apiRequest<{ data: LibrarySettings }>('/library_settings')
+  return json.data
+}
+
+export async function updateLibrarySettings(
+  input: LibrarySettingsInput,
+): Promise<LibrarySettings> {
+  const json = await apiRequest<{ data: LibrarySettings }>('/library_settings', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+  return json.data
+}
+
 // --- Seat assignments ---
 
 export type AssignmentType = 'RESERVED' | 'PREFERRED'
